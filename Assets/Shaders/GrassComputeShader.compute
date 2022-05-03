@@ -1,0 +1,165 @@
+﻿#pragma kernel ConvertGrassMatrix
+#pragma kernel CullFrustum
+#pragma kernel ProcessGrassCullLOD
+
+struct GrassData
+{
+    float3 pos;
+    float angle;
+    float2 scale;
+    float fadeDist;
+    uint divID;
+};
+
+struct PlaneData
+{
+    float3 normal;
+    float distance;
+};
+
+StructuredBuffer<GrassData> _GrassData;
+RWStructuredBuffer<float4x4> _GrassObjToWorld;
+
+StructuredBuffer<PlaneData> _FrustumPlanes;
+StructuredBuffer<float3> _CullBoundsMin;
+StructuredBuffer<float3> _CullBoundsMax;
+RWBuffer<uint> _CullBoundsResult;
+
+float3 _CameraPos;
+float _DistanceCullMin;
+float _DistanceCullMax;
+float _LODThreshold;
+
+AppendStructuredBuffer<uint> _NearGrassIndexes;
+AppendStructuredBuffer<uint> _MidGrassIndexes;
+
+// Y軸回転から回転行列を作成する
+float4x4 AngleY2Matrix(float y)
+{
+    float s = sin(y);
+    float c = cos(y);
+    float4x4 m = 0;
+    m._11_33 = c;
+    m._13 = s;
+    m._31 = -s;
+    m._22_44 = 1;
+    return m;
+}
+
+// XYスケールからスケール行列を作成する
+float4x4 ScaleXY2Matrix(float x, float y)
+{
+    float4x4 m = 0;
+    m._11_33 = x;
+    m._22 = y;
+    m._44 = 1;
+    return m;
+}
+
+// 法線から一番近い点を計算する
+float3 CalcNearestPoint(float3 min, float3 max, float3 normal)
+{
+    float3 result = min;
+    if (normal.x > 0)
+    {
+        result.x = max.x;
+    }
+    if (normal.y > 0)
+    {
+        result.y = max.y;
+    }
+    if (normal.z > 0)
+    {
+        result.z = max.z;
+    }
+    return result;
+}
+
+// 法線から一番遠い点を計算する
+float3 CalcFarthestPoint(float3 min, float3 max, float3 normal)
+{
+    float3 result = min;
+    if (normal.x < 0)
+    {
+        result.x = max.x;
+    }
+    if (normal.y < 0)
+    {
+        result.y = max.y;
+    }
+    if (normal.z < 0)
+    {
+        result.z = max.z;
+    }
+    return result;
+}
+
+// Planeと指定した座標との距離を計算する
+float CalcDistanceToPoint(PlaneData plane, float3 pos)
+{
+    return dot(plane.normal, pos) + plane.distance;
+}
+
+// 草データから草のモデル行列を求める
+[numthreads(64, 1, 1)]
+void ConvertGrassMatrix(uint id : SV_DispatchThreadID)
+{
+    GrassData grassData = _GrassData[id];
+    float4x4 scale = ScaleXY2Matrix(grassData.scale.x, grassData.scale.y);
+    float4x4 rotate = AngleY2Matrix(grassData.angle);
+    float4x4 m = mul(rotate, scale);
+    // 代入するだけで済むので平行移動行列は作らない
+    m._14_24_34 = grassData.pos;
+    _GrassObjToWorld[id] = m;
+}
+
+// 視錐台カリングを行う
+[numthreads(64, 1, 1)]
+void CullFrustum(uint id : SV_DispatchThreadID)
+{
+    float3 minPos = _CullBoundsMin[id];
+    float3 maxPos = _CullBoundsMax[id];
+
+    // _FrustumPlanesは6個前提で処理する
+    for (int i = 0; i < 6; i++)
+    {
+        float3 nearPoint = CalcNearestPoint(minPos, maxPos, _FrustumPlanes[i].normal);
+        float nearPointDistance = CalcDistanceToPoint(_FrustumPlanes[i], nearPoint);
+        if (nearPointDistance < 0)
+        {
+            _CullBoundsResult[id] = 0;
+            return;
+        }
+    }
+
+    _CullBoundsResult[id] = 1;
+}
+
+// 距離カリングとメッシュLODを行う
+[numthreads(64, 1, 1)]
+void ProcessGrassCullLOD(uint id : SV_DispatchThreadID)
+{
+    GrassData grassData = _GrassData[id];
+    uint cullResult = _CullBoundsResult[grassData.divID];
+    if (cullResult == 0)
+    {
+        return;
+    }
+
+    float dist = length(grassData.pos - _CameraPos);
+    float rate = smoothstep(_DistanceCullMin, _DistanceCullMax, dist);
+    float fadeDist = grassData.fadeDist * grassData.fadeDist * grassData.fadeDist;
+    fadeDist = fadeDist * fadeDist;
+    if (rate >= fadeDist)
+    {
+        return;
+    }
+
+    if (dist >= _LODThreshold)
+    {
+        _MidGrassIndexes.Append(id);
+        return;
+    }
+
+    _NearGrassIndexes.Append(id);
+}
