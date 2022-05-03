@@ -32,14 +32,6 @@ Shader "Custom/Grass-forURP"
     #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
     #include "CustomGrassCG.cginc"
 
-    float CalcSpecular(float3 positionWS, float3 normalWS)
-    {
-        Light light = GetMainLight();
-        float3 lightDir = normalize(light.direction);
-        float3 viewDir = GetWorldSpaceNormalizeViewDir(positionWS);
-        return CalcSpecular(normalWS, lightDir, viewDir);
-    }
-
     GrassVarying VertWithInteractive(GrassAttribute i, uint instanceID : SV_InstanceID)
     {
         uint grassID = _GrassIndexes[instanceID];
@@ -65,8 +57,11 @@ Shader "Custom/Grass-forURP"
 
         positionWS.xz += CalcPlayerPosBending(rootPositionWS, i.color.a);
 
+        Light light = GetMainLight();
+        float3 lightDir = normalize(light.direction);
+        float3 viewDir = GetWorldSpaceNormalizeViewDir(positionWS);
+        float specular = CalcSpecular(normalWS, lightDir, viewDir);
         float4 shadowCoord = TransformWorldToShadowCoord(positionWS);
-        float specular = CalcSpecular(positionWS, normalWS);
 
         GrassVarying o;
         o.positionCS = TransformWorldToHClip(positionWS);
@@ -100,8 +95,11 @@ Shader "Custom/Grass-forURP"
         positionWS.xz += windParam.windBezier.x * windParam.windWS;
         float3 normalWS = CustomTransformObjectToWorldNormal(i.normal, objToWorld);
 
+        Light light = GetMainLight();
+        float3 lightDir = normalize(light.direction);
+        float3 viewDir = GetWorldSpaceNormalizeViewDir(positionWS);
+        float specular = CalcSpecular(normalWS, lightDir, viewDir);
         float4 shadowCoord = TransformWorldToShadowCoord(positionWS);
-        float specular = CalcSpecular(positionWS, normalWS);
 
         GrassVarying o;
         o.positionCS = TransformWorldToHClip(positionWS);

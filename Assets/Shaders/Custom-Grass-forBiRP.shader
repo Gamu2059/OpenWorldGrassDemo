@@ -32,14 +32,6 @@ Shader "Custom/Grass-forBiRP"
     #include "UnityStandardCore.cginc"
     #include "CustomGrassCG.cginc"
 
-    float CalcSpecular(float3 positionWS, float3 normalWS)
-    {
-        UnityLight light = MainLight();
-        float3 lightDir = normalize(light.dir);
-        float3 viewDir = normalize(UnityWorldSpaceViewDir(positionWS));
-        return CalcSpecular(normalWS, lightDir, viewDir);
-    }
-
     GrassVarying VertWithInteractive(GrassAttribute i, uint instanceID : SV_InstanceID)
     {
         uint grassID = _GrassIndexes[instanceID];
@@ -65,7 +57,10 @@ Shader "Custom/Grass-forBiRP"
 
         positionWS.xz += CalcPlayerPosBending(rootPositionWS, i.color.a);
 
-        float specular = CalcSpecular(positionWS, normalWS);
+        UnityLight light = MainLight();
+        float3 lightDir = normalize(light.dir);
+        float3 viewDir = normalize(UnityWorldSpaceViewDir(positionWS));
+        float specular = CalcSpecular(normalWS, lightDir, viewDir);
 
         GrassVarying o;
         o.positionCS = UnityWorldToClipPos(positionWS);
@@ -99,7 +94,10 @@ Shader "Custom/Grass-forBiRP"
         positionWS.xz += windParam.windBezier.x * windParam.windWS;
         float3 normalWS = CustomTransformObjectToWorldNormal(i.normal, objToWorld);
 
-        float specular = CalcSpecular(positionWS, normalWS);
+        UnityLight light = MainLight();
+        float3 lightDir = normalize(light.dir);
+        float3 viewDir = normalize(UnityWorldSpaceViewDir(positionWS));
+        float specular = CalcSpecular(normalWS, lightDir, viewDir);
 
         GrassVarying o;
         o.positionCS = UnityWorldToClipPos(positionWS);

@@ -1,6 +1,0 @@
-﻿#ifndef CUSTOM_GRASS_TRANSFORM
-#define CUSTOM_GRASS_TRANSFORM
-
-
-
-#endif
