@@ -20,6 +20,7 @@ This software uses the following MIT licensed software.
   https://github.com/Cysharp/UniTask/blob/master/LICENSE
 
 ## References
+https://www.gdcvault.com/play/1027033/Advanced-Graphics-Summit-Procedural-Grass  
 https://zhuanlan.zhihu.com/p/385533650  
 https://github.com/ColinLeung-NiloCat/UnityURP-MobileDrawMeshInstancedIndirectExample  
 https://github.com/ellioman/Indirect-Rendering-With-Compute-Shaders
