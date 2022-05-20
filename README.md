@@ -3,8 +3,7 @@
 ## Licenses
 This software is released under the MIT License.
 
-Unityちゃん
-© Unity Technologies Japan/UCL
+This software uses the following MIT licensed software.
 
 EZAddresser
 https://github.com/Haruma-K/EZAddresser/blob/master/LICENSE.md
