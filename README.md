@@ -11,7 +11,7 @@ You can see demonstration in each of Built-in RP and URP.
 - Unity 2020.3.33f1
 
 ## Licenses
-This software is released under the MIT License.
+This software is released under the MIT License.  
 This software uses the following MIT licensed software.
 
 - EZAddresser
